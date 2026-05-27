@@ -1,10 +1,10 @@
-# AI Exam Quiz Platform
+# JagdiSu
 
 Next.js frontend + Spring Boot backend starter for an AI-based exam quiz website.
 
 ## Features
 
-- Login/signup-ready UI with demo login
+- Login/signup-ready UI with MySQL-backed authentication
 - Free plan with 10 quiz generations per day
 - Mock Pro subscription flow at Rs 20/month
 - Quiz setup with subject, exam name, optional chapter, language, question count, and hints
@@ -22,6 +22,15 @@ Next.js frontend + Spring Boot backend starter for an AI-based exam quiz website
 └── backend/       # Spring Boot API
 ```
 
+## Run App
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-app.ps1
+```
+
+Frontend runs on `http://localhost:1999`.
+Backend runs on `http://localhost:2000`.
+
 ## Run Frontend
 
 ```bash
@@ -34,18 +43,12 @@ Open `http://localhost:1999`.
 
 ## Run Backend
 
-Install Maven, then:
-
 ```bash
 cd backend
 mvn spring-boot:run
 ```
 
 Backend runs on `http://localhost:2000` and exposes a root status endpoint at `http://localhost:2000/`.
-
-## Subscription
-
-The frontend tracks free daily usage in browser storage. Free users get 10 successful quiz generations per day. After that, the app shows the subscription screen. The current Pro button activates a mock Rs 20/month plan through `POST /api/subscription/subscribe`; connect Razorpay or Stripe there for real payments.
 
 ## AI Configuration
 
