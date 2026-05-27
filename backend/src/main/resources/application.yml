@@ -1,0 +1,30 @@
+server:
+  port: 2000
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: ai-exam-quiz
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/jagdisu?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Bunty@123}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+
+app:
+  cors:
+    allowed-origins: "http://localhost:1999,http://127.0.0.1:1999,http://localhost:3000,http://127.0.0.1:3000"
+  google:
+    client-id: ${GOOGLE_CLIENT_ID:}
+  ai:
+    api-key: ${OPENROUTER_API_KEY:${OPENAI_API_KEY:}}
+    base-url: ${AI_BASE_URL:https://openrouter.ai/api/v1}
+    model: ${AI_MODEL:openai/gpt-4o-mini}
+    min-request-interval-ms: ${AI_MIN_REQUEST_INTERVAL_MS:5000}
+    retry-max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
+    retry-initial-delay-ms: ${AI_RETRY_INITIAL_DELAY_MS:2000}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:90}

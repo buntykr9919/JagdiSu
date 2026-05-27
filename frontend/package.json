@@ -1,0 +1,30 @@
+{
+  "name": "ai-exam-quiz-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 1999",
+    "build": "next build",
+    "serve:static": "node static-server.js",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.5.0",
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^0.468.0",
+    "next": "^15.5.18",
+    "postcss": "^8.5.15",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "^15.5.18",
+    "typescript": "^5.5.3"
+  }
+}

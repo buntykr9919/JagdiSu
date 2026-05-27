@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT NOT NULL AUTO_INCREMENT,
+  name VARCHAR(120) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  plan VARCHAR(32) NOT NULL DEFAULT 'FREE',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_users_email (email),
+  KEY idx_users_name (name)
+);
