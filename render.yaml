@@ -48,4 +48,5 @@ services:
     name: jagdisu-redis
     plan: free
     region: singapore
+    ipAllowList: []
     maxmemoryPolicy: allkeys-lru
