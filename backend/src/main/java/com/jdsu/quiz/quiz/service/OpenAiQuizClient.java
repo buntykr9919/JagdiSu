@@ -22,6 +22,7 @@ import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -37,6 +38,7 @@ public class OpenAiQuizClient {
     private final DynamicAiConfig dynamicAiConfig;
     private final AiProviderRouter aiProviderRouter;
     private final String model;
+    private final int maxOutputTokens;
     private final long minRequestIntervalMillis;
     private final int retryMaxAttempts;
     private final long retryInitialDelayMillis;
@@ -48,6 +50,7 @@ public class OpenAiQuizClient {
             DynamicAiConfig dynamicAiConfig,
             AiProviderRouter aiProviderRouter,
             @Value("${app.ai.model}") String model,
+            @Value("${app.ai.max-output-tokens:4096}") int maxOutputTokens,
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.min-request-interval-ms}") long minRequestIntervalMillis,
             @Value("${app.ai.retry-max-attempts}") int retryMaxAttempts,
@@ -58,6 +61,7 @@ public class OpenAiQuizClient {
         this.dynamicAiConfig = dynamicAiConfig;
         this.aiProviderRouter = aiProviderRouter;
         this.model = model;
+        this.maxOutputTokens = Math.max(512, maxOutputTokens);
         this.minRequestIntervalMillis = Math.max(0L, minRequestIntervalMillis);
         this.retryMaxAttempts = Math.max(1, retryMaxAttempts);
         this.retryInitialDelayMillis = Math.max(0L, retryInitialDelayMillis);
@@ -173,20 +177,20 @@ public class OpenAiQuizClient {
                     String.join("; ", pattern.generationRules())
             );
 
-            Map<String, Object> payload = Map.of(
-                    "model", model,
-                    "messages", List.of(
-                            Map.of("role", "system", "content", """
-                                    You are an expert Indian exam paper-setter.
-                                    You produce original, exam-pattern MCQs only.
-                                    You never reveal chain-of-thought and never copy protected source questions verbatim.
-                                    Before answering, silently check that all options are balanced in length and plausibility.
-                                    """),
-                            Map.of("role", "user", "content", prompt)
-                    ),
-                    "temperature", 0.35,
-                    "response_format", Map.of("type", "json_object")
-            );
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("model", model);
+            payload.put("messages", List.of(
+                    Map.of("role", "system", "content", """
+                            You are an expert Indian exam paper-setter.
+                            You produce original, exam-pattern MCQs only.
+                            You never reveal chain-of-thought and never copy protected source questions verbatim.
+                            Before answering, silently check that all options are balanced in length and plausibility.
+                            """),
+                    Map.of("role", "user", "content", prompt)
+            ));
+            payload.put("temperature", 0.35);
+            payload.put("max_tokens", maxOutputTokens);
+            payload.put("response_format", Map.of("type", "json_object"));
 
             String raw = generateWithOpenAi(payload);
 
