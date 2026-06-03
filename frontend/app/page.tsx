@@ -213,6 +213,7 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<LoggedInUser | null>(null);
   const [adminLoggedIn, setAdminLoggedIn] = useState(false);
   const [adminLoginMode, setAdminLoginMode] = useState(false);
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminToken, setAdminToken] = useState("");
@@ -357,6 +358,10 @@ export default function HomePage() {
       setAttempts(Array.isArray(savedAttempts) ? savedAttempts.slice(0, 20) : []);
     } catch {
       setAttempts([]);
+    }
+
+    if (window.location.search.includes("admin=1")) {
+      setAdminLoginMode(true);
     }
   }, []);
 
@@ -2211,7 +2216,19 @@ export default function HomePage() {
               <button className="button primary" onClick={adminLoginMode ? loginAsSuperadmin : login} disabled={loading} type="button">
                 {adminLoginMode ? <Crown size={23} /> : <GraduationCap size={23} />} {loading ? "Please wait..." : adminLoginMode ? "Open Dashboard" : "Login"}
               </button>
-              {adminLoginMode ? null : (
+              {adminLoginMode ? (
+                <button
+                  className="button ghost"
+                  onClick={() => {
+                    window.location.href = "/superadmin/signup";
+                    setError("");
+                  }}
+                  disabled={loading}
+                  type="button"
+                >
+                  <UserRound size={22} /> Superadmin Signup
+                </button>
+              ) : (
                 <button
                   className="button ghost"
                   onClick={() => {
@@ -2224,17 +2241,6 @@ export default function HomePage() {
                   <UserRound size={22} /> Signup
                 </button>
               )}
-              <button
-                className="button secondary"
-                onClick={() => {
-                  setAdminLoginMode((value) => !value);
-                  setError("");
-                }}
-                disabled={loading}
-                type="button"
-              >
-                <Crown size={18} /> {adminLoginMode ? "Student Login" : "Superadmin Login"}
-              </button>
               {adminLoginMode ? (
                 <p className="quote">Default local admin: admin@jagdisu.local / 123456</p>
               ) : GOOGLE_LOGIN_ENABLED ? (
@@ -2253,6 +2259,50 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+        <div className="site-help-widget">
+          {helpMenuOpen ? (
+            <div className="site-help-menu" role="menu" aria-label="Help options">
+              <strong>Need help?</strong>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  window.location.href = "/complaint";
+                }}
+              >
+                <MessageCircle size={17} /> User complaint
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setAdminLoginMode(true);
+                  setHelpMenuOpen(false);
+                  setError("");
+                }}
+              >
+                <Crown size={17} /> Superadmin login
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  window.location.href = "/superadmin/signup";
+                }}
+              >
+                <UserRound size={17} /> Superadmin signup
+              </button>
+            </div>
+          ) : null}
+          <button
+            className="site-help-button"
+            type="button"
+            aria-expanded={helpMenuOpen}
+            onClick={() => setHelpMenuOpen((value) => !value)}
+          >
+            Help
+          </button>
+        </div>
         {signupMode ? (
           <div className="auth-modal-backdrop" role="presentation" onClick={() => setSignupMode(false)}>
             <section
