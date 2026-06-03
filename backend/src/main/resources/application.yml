@@ -1,5 +1,5 @@
 server:
-  port: 2000
+  port: ${PORT:2000}
 
 spring:
   config:
@@ -68,7 +68,7 @@ app:
     password: ${SUPERADMIN_PASSWORD:123456}
     token: ${SUPERADMIN_TOKEN:jagdisu-superadmin-local-token}
   cors:
-    allowed-origins: "http://localhost:1999,http://127.0.0.1:1999,http://localhost:3000,http://127.0.0.1:3000"
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:1999,http://127.0.0.1:1999,http://localhost:3000,http://127.0.0.1:3000}
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
   notification:

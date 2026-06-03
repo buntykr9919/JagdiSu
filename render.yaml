@@ -1,0 +1,51 @@
+services:
+  - type: web
+    name: jagdisu-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: AI_PROVIDER
+        value: OPENROUTER
+      - key: AI_BASE_URL
+        value: https://openrouter.ai/api/v1
+      - key: AI_MODEL
+        value: openai/gpt-4o-mini
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: SUPERADMIN_TOKEN
+        generateValue: true
+      - key: APP_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: REDIS_HOST
+        fromService:
+          type: keyvalue
+          name: jagdisu-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: keyvalue
+          name: jagdisu-redis
+          property: port
+
+  - type: keyvalue
+    name: jagdisu-redis
+    plan: free
+    region: singapore
+    maxmemoryPolicy: allkeys-lru
