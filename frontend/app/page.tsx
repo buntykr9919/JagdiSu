@@ -276,7 +276,6 @@ export default function HomePage() {
   const [batchLoading, setBatchLoading] = useState(false);
   const [prefetchNotice, setPrefetchNotice] = useState("");
   const [showResult, setShowResult] = useState(false);
-  const [reviewAnswersMode, setReviewAnswersMode] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [studentNotes, setStudentNotes] = useState("");
   const [topicForm, setTopicForm] = useState({ topic: "", language: "English" });
@@ -1579,7 +1578,6 @@ export default function HomePage() {
   }
 
   function completeQuiz() {
-    setReviewAnswersMode(false);
     if (!quiz || savedResultQuizId === quiz.quizId) {
       setShowResult(true);
       setTimedTestActive(false);
@@ -1606,66 +1604,6 @@ export default function HomePage() {
     window.localStorage.setItem(ATTEMPTS_STORAGE_KEY, JSON.stringify(nextAttempts));
     setShowResult(true);
     setTimedTestActive(false);
-  }
-
-  function openAnswerReview() {
-    setShowResult(false);
-    setReviewAnswersMode(true);
-    setCurrentIndex(0);
-    setShowHint(false);
-    setTimedTestActive(false);
-  }
-
-  function buildMemoryTrick(question: Question) {
-    const correctAnswer = question.options[question.correctAnswerIndex] ?? "the correct option";
-    const cleanAnswer = correctAnswer.replace(/^[A-D]\.?\s*/i, "").trim();
-    const shortAnswer = cleanAnswer.length > 48 ? `${cleanAnswer.slice(0, 48)}...` : cleanAnswer;
-    const firstWords = cleanAnswer
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 4)
-      .map((word) => word[0]?.toUpperCase())
-      .join("");
-
-    if (firstWords.length >= 2) {
-      return `Desi trick: answer ke initials "${firstWords}" yaad rakho aur socho exam hall me chai-wala bol raha hai, "${shortAnswer}" hi pakka jawab hai. Thoda filmy, par recall fast hota hai.`;
-    }
-
-    return `Funny trick: "${shortAnswer}" ko apne dimaag ka VIP guest bana do. Jab bhi question ka keyword dikhe, bolo "VIP answer aa gaya" aur isi option ko recall karo.`;
-  }
-
-  function buildDeepExplanation(question: Question) {
-    const correctAnswer = question.options[question.correctAnswerIndex] ?? "the correct option";
-    const baseExplanation = question.explanation?.trim() || "The correct answer follows directly from the core concept tested in this question.";
-    return {
-      correctAnswer,
-      concept: `Correct answer: ${correctAnswer}`,
-      explanation: baseExplanation,
-      memoryTrick: buildMemoryTrick(question)
-    };
-  }
-
-  function getOptionClass(question: Question, index: number) {
-    const selectedAnswer = answers[question.id];
-    const classes = ["option"];
-
-    if (!reviewAnswersMode && selectedAnswer === index) {
-      classes.push("selected");
-    }
-
-    if (reviewAnswersMode) {
-      if (index === question.correctAnswerIndex) {
-        classes.push("correct-answer");
-      }
-      if (selectedAnswer === index && selectedAnswer !== question.correctAnswerIndex) {
-        classes.push("wrong-answer");
-      }
-      if (selectedAnswer === index) {
-        classes.push("selected-review");
-      }
-    }
-
-    return classes.join(" ");
   }
 
   function downloadNotes() {
@@ -3684,17 +3622,20 @@ export default function HomePage() {
                 </section>
                 <div className="nav-actions">
                   <button
-                    className="button primary"
-                    onClick={openAnswerReview}
+                    className="button ghost"
+                    onClick={() => {
+                      setShowResult(false);
+                      setCurrentIndex(0);
+                      setShowHint(false);
+                    }}
                   >
-                    <FileCheck size={18} /> Check Answers
+                    Review Test
                   </button>
                   <button
-                    className="button ghost"
+                    className="button primary"
                     style={{ width: "auto" }}
                     onClick={() => {
                       setQuiz(null);
-                      setReviewAnswersMode(false);
                       setTargetQuestionCount(0);
                       setPrefetchNotice("");
                       setTimedTestActive(false);
@@ -3712,7 +3653,7 @@ export default function HomePage() {
                   <div>
                     <span className="pill">{quiz.difficulty}</span>
                     <h1 className="section-title" style={{ fontSize: "2rem", marginTop: 12 }}>
-                      {reviewAnswersMode ? "Check Answers" : "Question"} {currentIndex + 1} of {totalQuizQuestions}
+                      Question {currentIndex + 1} of {totalQuizQuestions}
                     </h1>
                   </div>
                   <div className="question-head-actions">
@@ -3726,7 +3667,6 @@ export default function HomePage() {
                       className="button ghost"
                       onClick={() => {
                         setQuiz(null);
-                        setReviewAnswersMode(false);
                         setTargetQuestionCount(0);
                         setPrefetchNotice("");
                         setTimedTestActive(false);
@@ -3745,40 +3685,17 @@ export default function HomePage() {
                 <section className="panel panel-pad question-card">
                   <p className="question-text">{question?.question}</p>
                   <div className="options">
-                    {question?.options.map((option, index) => {
-                      const isCorrect = index === question.correctAnswerIndex;
-                      const isSelected = answers[question.id] === index;
-                      return (
-                        <button
-                          key={option}
-                          className={getOptionClass(question, index)}
-                          onClick={() => {
-                            if (!reviewAnswersMode) {
-                              setAnswers({ ...answers, [question.id]: index });
-                            }
-                          }}
-                          disabled={reviewAnswersMode}
-                        >
-                          <span>{option}</span>
-                          {reviewAnswersMode && isCorrect ? <strong>Right answer</strong> : null}
-                          {reviewAnswersMode && isSelected && !isCorrect ? <strong>Your answer</strong> : null}
-                        </button>
-                      );
-                    })}
+                    {question?.options.map((option, index) => (
+                      <button
+                        key={option}
+                        className={`option ${answers[question.id] === index ? "selected" : ""}`}
+                        onClick={() => setAnswers({ ...answers, [question.id]: index })}
+                      >
+                        {option}
+                      </button>
+                    ))}
                   </div>
-                  {reviewAnswersMode && question ? (
-                    <div className="answer-review-panel">
-                      <div>
-                        <span className="pill">Deep Explanation</span>
-                        <h2>{buildDeepExplanation(question).concept}</h2>
-                      </div>
-                      <p>{buildDeepExplanation(question).explanation}</p>
-                      <div className="memory-trick">
-                        <Lightbulb size={19} />
-                        <span>{buildDeepExplanation(question).memoryTrick}</span>
-                      </div>
-                    </div>
-                  ) : form.hintsEnabled && question ? (
+                  {form.hintsEnabled && question ? (
                     <div className="hint-box">
                       <button className="button ghost" type="button" onClick={() => setShowHint((value) => !value)}>
                         <Lightbulb size={18} /> {showHint ? "Hide Hint" : "Show Hint"}
@@ -3803,16 +3720,6 @@ export default function HomePage() {
                     style={{ width: "auto" }}
                     disabled={currentIndex === quiz.questions.length - 1 && quiz.questions.length < totalQuizQuestions}
                     onClick={() => {
-                      if (reviewAnswersMode) {
-                        if (currentIndex === quiz.questions.length - 1) {
-                          setReviewAnswersMode(false);
-                          setShowResult(true);
-                        } else {
-                          setCurrentIndex((value) => Math.min(quiz.questions.length - 1, value + 1));
-                        }
-                        setShowHint(false);
-                        return;
-                      }
                       const hasLoadedAllQuestions = quiz.questions.length >= totalQuizQuestions;
                       if (currentIndex === quiz.questions.length - 1 && hasLoadedAllQuestions) {
                         completeQuiz();
@@ -3822,11 +3729,7 @@ export default function HomePage() {
                       }
                     }}
                   >
-                    {reviewAnswersMode && currentIndex === quiz.questions.length - 1
-                      ? "Back to Report"
-                      : reviewAnswersMode
-                        ? "Next Answer"
-                        : currentIndex === quiz.questions.length - 1 && quiz.questions.length >= totalQuizQuestions
+                    {currentIndex === quiz.questions.length - 1 && quiz.questions.length >= totalQuizQuestions
                       ? "Submit Test"
                       : currentIndex === quiz.questions.length - 1 && form.examName !== "Notes Based Quiz"
                         ? "Loading Next..."
