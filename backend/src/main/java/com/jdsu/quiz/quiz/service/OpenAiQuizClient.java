@@ -189,7 +189,7 @@ public class OpenAiQuizClient {
                     Map.of("role", "user", "content", prompt)
             ));
             payload.put("temperature", 0.35);
-            payload.put("max_tokens", maxOutputTokens);
+            payload.put("max_tokens", resolveMaxOutputTokens(request));
             payload.put("response_format", Map.of("type", "json_object"));
 
             String raw = generateWithOpenAi(payload);
@@ -281,6 +281,12 @@ public class OpenAiQuizClient {
 
     private String generateWithOpenAi(Map<String, Object> payload) {
         return callProviderWithRetry(() -> aiProviderRouter.chatCompletion("QUIZ_GENERATION", model, payload).rawBody());
+    }
+
+    private int resolveMaxOutputTokens(QuizGenerateRequest request) {
+        int requestedQuestions = Math.max(1, request.numberOfQuestions());
+        int estimatedTokens = 1200 + requestedQuestions * 850;
+        return Math.max(1200, Math.min(maxOutputTokens, estimatedTokens));
     }
 
     private String postToOpenAi(Map<String, Object> payload) {
