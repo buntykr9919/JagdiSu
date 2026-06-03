@@ -1,0 +1,35 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+  namespace: jagdisu
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: mysql:8.4
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  mkdir -p /backups &&
+                  mysqldump -h "$DB_HOST" -u "$DB_USERNAME" -p"$DB_PASSWORD" --single-transaction --routines --triggers "$DB_NAME" | gzip > "/backups/$DB_NAME-$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
+              envFrom:
+                - secretRef:
+                    name: jagdisu-secrets
+              env:
+                - name: DB_HOST
+                  value: mysql
+                - name: DB_NAME
+                  value: jagdisu
+              volumeMounts:
+                - name: backups
+                  mountPath: /backups
+          volumes:
+            - name: backups
+              persistentVolumeClaim:
+                claimName: mysql-backups

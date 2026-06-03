@@ -3,6 +3,7 @@ package com.jdsu.quiz.quiz.service;
 import com.jdsu.quiz.quiz.dto.QuizGenerateRequest;
 import com.jdsu.quiz.quiz.model.ExamPattern;
 import com.jdsu.quiz.quiz.model.QuestionFormat;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,6 +11,7 @@ import java.util.Locale;
 
 @Service
 public class ExamPatternService {
+    @Cacheable(cacheNames = "examPatterns", key = "#request.examName() + ':' + #request.subject() + ':' + #request.difficultyLevel()")
     public ExamPattern resolvePattern(QuizGenerateRequest request) {
         String exam = request.examName().toLowerCase(Locale.ROOT);
 

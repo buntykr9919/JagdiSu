@@ -1,10 +1,15 @@
 # JagdiSu
 
-Next.js frontend + Spring Boot backend starter for an AI-based exam quiz website.
+Next.js frontend + Spring Boot backend starter for JagdiSu, an AI-powered exam preparation and learning platform.
 
 ## Features
 
 - Login/signup-ready UI with MySQL-backed authentication
+- Google login backend endpoint
+- Starter Super Admin dashboard endpoints
+- MySQL schema foundation for RBAC, sessions, verification tokens, subscriptions, payments, courses, exams, questions, AI usage, notifications, analytics, audit logs, support tickets, and community
+- API rate limiting for `/api/**`
+- Spring Actuator + Prometheus metrics endpoints
 - Free plan with 10 quiz generations per day
 - Mock Pro subscription flow at Rs 20/month
 - Quiz setup with subject, exam name, optional chapter, language, question count, and hints
@@ -14,12 +19,19 @@ Next.js frontend + Spring Boot backend starter for an AI-based exam quiz website
 - Pattern-aware question formats: statement-based, one-liner, or mixed
 - Balanced options so answer guessing by option length is harder
 
+## Production Architecture
+
+The production-ready architecture requested for JagdiSu is documented in `docs/production-architecture.md`. The implementation audit and enterprise readiness report is documented in `docs/enterprise-audit-report.md`.
+
+Current implementation status: this repository is still a single Spring Boot backend, not separate deployable microservices. Packages such as `auth`, `ai`, `community`, and `subscription` are modules inside one application. The microservice design in the architecture document is the target architecture to implement next.
+
 ## Project Structure
 
 ```text
 .
-├── frontend/      # Next.js app
-└── backend/       # Spring Boot API
++-- frontend/      # Next.js app
++-- backend/       # Spring Boot API
++-- docs/          # Production architecture
 ```
 
 ## Run App
@@ -49,6 +61,14 @@ mvn spring-boot:run
 ```
 
 Backend runs on `http://localhost:2000` and exposes a root status endpoint at `http://localhost:2000/`.
+
+Useful backend endpoints:
+
+```text
+GET /api/health
+GET /actuator/health
+GET /actuator/prometheus
+```
 
 ## AI Configuration
 

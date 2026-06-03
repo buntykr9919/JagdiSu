@@ -1,0 +1,24 @@
+groups:
+  - name: jagdisu.rules
+    rules:
+      - alert: BackendDown
+        expr: up{job="jagdisu-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: JagdiSu backend is down
+      - alert: HighHttp5xx
+        expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High 5xx error rate
+      - alert: SlowApiP95
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 0.3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: API p95 latency above 300ms

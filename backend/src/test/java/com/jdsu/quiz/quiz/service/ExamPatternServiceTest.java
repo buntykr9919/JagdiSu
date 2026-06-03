@@ -10,7 +10,7 @@ class ExamPatternServiceTest {
 
     @Test
     void resolvesJeePattern() {
-        var pattern = service.resolvePattern(new QuizGenerateRequest("Physics", "JEE Main", "Optics", "English", 5, "Exam Pattern", true, 0.25, null, null, null));
+        var pattern = service.resolvePattern(new QuizGenerateRequest("Physics", "JEE Main", "Optics", "English", 5, "Exam Pattern", true, 0.25, null, null, null, false));
 
         assertThat(pattern.difficulty()).contains("Medium");
         assertThat(pattern.patternSummary()).contains("JEE");

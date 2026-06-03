@@ -1,5 +1,6 @@
 package com.jdsu.quiz.ai;
 
+import com.jdsu.quiz.ai.provider.AiProviderRouter;
 import com.jdsu.quiz.config.DynamicAiConfig;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -17,15 +18,18 @@ import java.util.UUID;
 @RequestMapping("/api/ai-model")
 public class AiModelController {
     private final DynamicAiConfig dynamicAiConfig;
+    private final AiProviderRouter aiProviderRouter;
     private final String aiBaseUrl;
     private final String aiModel;
 
     public AiModelController(
             DynamicAiConfig dynamicAiConfig,
+            AiProviderRouter aiProviderRouter,
             @Value("${app.ai.base-url}") String aiBaseUrl,
             @Value("${app.ai.model}") String aiModel
     ) {
         this.dynamicAiConfig = dynamicAiConfig;
+        this.aiProviderRouter = aiProviderRouter;
         this.aiBaseUrl = aiBaseUrl;
         this.aiModel = aiModel;
     }
@@ -43,10 +47,11 @@ public class AiModelController {
                         "No-demo enforcement"
                 ),
                 List.of(
-                        "Provider type: OPENAI",
+                        "Provider type: ROUTED_MULTI_PROVIDER",
                         "Provider: " + aiBaseUrl,
                         "Model: " + aiModel,
-                        "Crawler/OCR pipeline scaffolded as ingestion contract",
+                        "Configured providers: " + String.join(", ", aiProviderRouter.configuredProviders()),
+                        "Crawler and document-reading pipeline scaffolded as ingestion contract",
                         "Live web crawling disabled until source URLs and permissions are configured",
                         "Fine-tuning requires curated dataset and GPU/hosted training",
                         hasAiKey()
@@ -61,14 +66,14 @@ public class AiModelController {
         return new IngestionJobResponse(
                 UUID.randomUUID().toString(),
                 "QUEUED_FOR_REVIEW",
-                "Source accepted as a future crawl/OCR/index job. Configure a crawler worker before automatic downloading.",
+                "Source accepted as a future crawl/document-reading/index job. Configure a crawler worker before automatic downloading.",
                 request.sourceUrl(),
                 request.examName()
         );
     }
 
     private boolean hasAiKey() {
-        return dynamicAiConfig.hasApiKey();
+        return aiProviderRouter.hasConfiguredProvider();
     }
 
     public record AiModelStatus(

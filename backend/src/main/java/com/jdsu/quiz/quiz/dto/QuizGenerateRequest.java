@@ -15,8 +15,9 @@ public record QuizGenerateRequest(
         String difficultyLevel,
         boolean hintsEnabled,
         double negativeMarking,
-        @Min(1) @Max(150) Integer totalQuestions,
+        @Min(1) @Max(200) Integer totalQuestions,
         @Min(1) Integer batchNumber,
-        List<String> previousQuestionSummaries
+        List<String> previousQuestionSummaries,
+        boolean fullTestMode
 ) {
 }

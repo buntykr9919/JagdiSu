@@ -28,7 +28,9 @@ public class QuestionQualityService {
                     rebalanceOptions(options),
                     Math.min(question.correctAnswerIndex(), 3),
                     question.explanation() + " Options were normalized for balanced length and plausibility.",
-                    question.difficulty()
+                    question.difficulty(),
+                    question.subject(),
+                    question.topic()
             );
         }
 
@@ -38,7 +40,9 @@ public class QuestionQualityService {
                 question.options(),
                 question.correctAnswerIndex(),
                 question.explanation(),
-                question.difficulty()
+                question.difficulty(),
+                question.subject(),
+                question.topic()
         );
     }
 

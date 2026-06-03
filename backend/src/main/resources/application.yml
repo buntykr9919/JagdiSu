@@ -11,20 +11,164 @@ spring:
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:Bunty@123}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:30}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
   sql:
     init:
       mode: always
+      continue-on-error: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: ${REDIS_TIMEOUT_MS:2000}
+  cache:
+    type: redis
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 25MB
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:false}
+          starttls:
+            enable: ${SMTP_STARTTLS:false}
+  task:
+    scheduling:
+      pool:
+        size: ${SCHEDULER_POOL_SIZE:4}
 
 app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:${SUPERADMIN_TOKEN:jagdisu-dev-secret-change-me}}
+      access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
+      refresh-token-ttl-days: ${JWT_REFRESH_TOKEN_TTL_DAYS:30}
+    verification:
+      token-ttl-minutes: ${VERIFICATION_TOKEN_TTL_MINUTES:15}
+    account-lock:
+      max-failed-attempts: ${ACCOUNT_LOCK_MAX_FAILED_ATTEMPTS:5}
+      lock-minutes: ${ACCOUNT_LOCK_MINUTES:15}
+  rate-limit:
+    enabled: ${RATE_LIMIT_ENABLED:true}
+    requests-per-minute: ${RATE_LIMIT_REQUESTS_PER_MINUTE:120}
+  admin:
+    email: ${SUPERADMIN_EMAIL:admin@jagdisu.local}
+    password: ${SUPERADMIN_PASSWORD:123456}
+    token: ${SUPERADMIN_TOKEN:jagdisu-superadmin-local-token}
   cors:
     allowed-origins: "http://localhost:1999,http://127.0.0.1:1999,http://localhost:3000,http://127.0.0.1:3000"
   google:
     client-id: ${GOOGLE_CLIENT_ID:}
+  notification:
+    email:
+      from: ${SMTP_FROM:no-reply@jagdisu.local}
+      enabled: ${SMTP_ENABLED:true}
+    sms:
+      enabled: ${SMS_ENABLED:false}
+      gateway-url: ${SMS_GATEWAY_URL:}
+      api-key: ${SMS_API_KEY:}
+      sender-id: ${SMS_SENDER_ID:JAGDSU}
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:jagdisu-uploads}
+    public-url: ${MINIO_PUBLIC_URL:http://localhost:9000}
+  razorpay:
+    key-id: ${RAZORPAY_KEY_ID:}
+    key-secret: ${RAZORPAY_KEY_SECRET:}
+    webhook-secret: ${RAZORPAY_WEBHOOK_SECRET:}
+    currency: ${RAZORPAY_CURRENCY:INR}
+  events:
+    stream-key: ${EVENT_STREAM_KEY:jagdisu.events}
+    consumer-delay-ms: ${EVENT_CONSUMER_DELAY_MS:10000}
+  services:
+    auth-url: ${AUTH_SERVICE_URL:http://localhost:2000}
+    user-url: ${USER_SERVICE_URL:http://localhost:2000}
+    ai-url: ${AI_SERVICE_URL:http://localhost:2000}
+    exam-url: ${EXAM_SERVICE_URL:http://localhost:2000}
+    payment-url: ${PAYMENT_SERVICE_URL:http://localhost:2000}
+    notification-url: ${NOTIFICATION_SERVICE_URL:http://localhost:2000}
+    community-url: ${COMMUNITY_SERVICE_URL:http://localhost:2000}
+  elasticsearch:
+    enabled: ${ELASTICSEARCH_ENABLED:false}
+    url: ${ELASTICSEARCH_URL:http://localhost:9200}
+    username: ${ELASTICSEARCH_USERNAME:}
+    password: ${ELASTICSEARCH_PASSWORD:}
+    index-prefix: ${ELASTICSEARCH_INDEX_PREFIX:jagdisu}
   ai:
+    provider: ${AI_PROVIDER:OPENROUTER}
+    failover-order: ${AI_FAILOVER_ORDER:OPENROUTER,OPENAI,GEMINI,DEEPSEEK,CLAUDE}
     api-key: ${OPENROUTER_API_KEY:${OPENAI_API_KEY:}}
     base-url: ${AI_BASE_URL:https://openrouter.ai/api/v1}
     model: ${AI_MODEL:openai/gpt-4o-mini}
     min-request-interval-ms: ${AI_MIN_REQUEST_INTERVAL_MS:5000}
     retry-max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
     retry-initial-delay-ms: ${AI_RETRY_INITIAL_DELAY_MS:2000}
-    timeout-seconds: ${AI_TIMEOUT_SECONDS:90}
+    timeout-seconds: ${AI_TIMEOUT_SECONDS:90} 
+    budget:
+      daily-cost-usd: ${AI_DAILY_COST_LIMIT_USD:25}
+      daily-token-limit: ${AI_DAILY_TOKEN_LIMIT:500000}
+      per-feature-cost-usd: ${AI_FEATURE_DAILY_COST_LIMIT_USD:10}
+    circuit-breaker:
+      failure-threshold: ${AI_PROVIDER_FAILURE_THRESHOLD:3}
+      cool-down-seconds: ${AI_PROVIDER_COOLDOWN_SECONDS:60}
+    providers:
+      openrouter:
+        api-key: ${OPENROUTER_API_KEY:${OPENAI_API_KEY:}}
+        base-url: ${OPENROUTER_BASE_URL:https://openrouter.ai/api/v1}
+      openai:
+        api-key: ${OPENAI_API_KEY:}
+        base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+      gemini:
+        api-key: ${GEMINI_API_KEY:}
+        base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
+      claude:
+        api-key: ${CLAUDE_API_KEY:}
+        base-url: ${CLAUDE_BASE_URL:https://api.anthropic.com/v1}
+      deepseek:
+        api-key: ${DEEPSEEK_API_KEY:}
+        base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+
+management:
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLE_PROBABILITY:1.0}
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318/v1/traces}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when_authorized
+
+resilience4j:
+  retry:
+    instances:
+      aiProvider:
+        max-attempts: ${AI_RETRY_MAX_ATTEMPTS:3}
+        wait-duration: ${AI_RETRY_INITIAL_DELAY_MS:2000}ms
+  circuitbreaker:
+    instances:
+      aiProvider:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: ${AI_PROVIDER_COOLDOWN_SECONDS:60}s

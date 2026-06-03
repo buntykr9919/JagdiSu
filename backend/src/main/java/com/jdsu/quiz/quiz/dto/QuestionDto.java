@@ -8,7 +8,8 @@ public record QuestionDto(
         List<String> options,
         int correctAnswerIndex,
         String explanation,
-        String difficulty
+        String difficulty,
+        String subject,
+        String topic
 ) {
 }
-

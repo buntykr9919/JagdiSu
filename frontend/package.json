@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/clean-next-cache.mjs",
     "dev": "next dev --hostname 127.0.0.1 --port 1999",
     "build": "next build",
     "serve:static": "node static-server.js",

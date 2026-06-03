@@ -16,12 +16,15 @@ import {
   Phone,
   ShieldCheck,
   Sparkles,
+  Star,
   UserRound,
   UsersRound
 } from "lucide-react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:2000/api";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
+const BACKEND_RETRY_ATTEMPTS = 5;
+const BACKEND_RETRY_DELAY_MS = 800;
 
 type GoogleCredentialResponse = {
   credential?: string;
@@ -67,6 +70,34 @@ const features = [
   { title: "Progress tracking", icon: BarChart3, copy: "Review recent attempts and weak topics." },
   { title: "Study notes", icon: BookOpen, copy: "Create quick revision notes for any topic." }
 ];
+
+const signupStats = [
+  { value: "6-digit", label: "secure PIN password" },
+  { value: "Free", label: "starter learning plan" },
+  { value: "AI", label: "quiz and notes support" }
+];
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function fetchBackend(input: RequestInfo | URL, init?: RequestInit) {
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= BACKEND_RETRY_ATTEMPTS; attempt += 1) {
+    try {
+      return await fetch(input, init);
+    } catch (error) {
+      lastError = error;
+      if (!(error instanceof TypeError) || attempt === BACKEND_RETRY_ATTEMPTS) {
+        throw error;
+      }
+      await sleep(BACKEND_RETRY_DELAY_MS);
+    }
+  }
+
+  throw lastError;
+}
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -139,7 +170,7 @@ export default function SignupPage() {
     if (values.fullName.trim().length < 2) nextErrors.fullName = "Enter your full name.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) nextErrors.email = "Enter a valid email.";
     if (!/^\d{10,15}$/.test(values.mobile.replace(/\D/g, ""))) nextErrors.mobile = "Enter a valid mobile number.";
-    if (values.password.length < 8) nextErrors.password = "Use at least 8 characters.";
+    if (!/^\d{6}$/.test(values.password)) nextErrors.password = "Password must be exactly 6 digits.";
     if (values.confirmPassword !== values.password) nextErrors.confirmPassword = "Passwords do not match.";
     if (!values.role) nextErrors.role = "Select a role.";
     if (!values.terms) nextErrors.terms = "Accept the terms to continue.";
@@ -159,7 +190,7 @@ export default function SignupPage() {
 
     setSignupLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+      const response = await fetchBackend(`${API_BASE_URL}/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -181,10 +212,13 @@ export default function SignupPage() {
       setSubmitted(true);
       window.location.href = "/";
     } catch (err) {
+      const rawMessage = err instanceof Error ? err.message : "";
       const message = err instanceof TypeError
-        ? "Backend is not reachable. Please start the Spring Boot server on port 2000 and check MySQL."
+        ? "Backend is not reachable. Run .\\run-app.ps1 so Spring Boot starts on port 2000 and MySQL is checked."
         : err instanceof Error
-          ? err.message
+          ? rawMessage.includes("at least 6 characters")
+            ? "Password must be exactly 6 digits."
+            : rawMessage
           : "Signup failed. Please try again.";
       setSignupError(message);
     } finally {
@@ -205,7 +239,7 @@ export default function SignupPage() {
 
     setSignupLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+      const response = await fetchBackend(`${API_BASE_URL}/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ credential })
@@ -246,13 +280,22 @@ export default function SignupPage() {
 
         <section className="signup-page-layout">
           <aside className="panel panel-pad signup-page-info">
-            <span className="pill">
+            <span className="pill signup-page-pill">
               <Sparkles size={16} /> Student workspace
             </span>
             <h1 className="section-title">Create your JagdiSu account</h1>
             <p className="subtitle">
               Join the same learning workspace used for AI quizzes, topic notes, handwritten answer review, and progress tracking.
             </p>
+
+            <div className="signup-page-stats">
+              {signupStats.map((stat) => (
+                <div key={stat.label}>
+                  <strong>{stat.value}</strong>
+                  <span>{stat.label}</span>
+                </div>
+              ))}
+            </div>
 
             <div className="signup-page-feature-grid">
               {features.map((feature) => {
@@ -275,7 +318,7 @@ export default function SignupPage() {
               <ShieldCheck size={22} />
               <div>
                 <strong>Secure account setup</strong>
-                <span>Your learning history and plan details stay connected to your account.</span>
+                <span>Your learning history, plan details, and quiz progress stay connected to your account.</span>
               </div>
             </div>
           </aside>
@@ -290,6 +333,11 @@ export default function SignupPage() {
                 <h2 className="auth-title">Sign up</h2>
                 <p className="subtitle">Start learning with JagdiSu AI today.</p>
               </div>
+            </div>
+
+            <div className="signup-page-mini-note">
+              <Star size={17} />
+              <span>Use a simple 6-digit numeric password for this account.</span>
             </div>
 
             <form className="form-grid signup-page-form" onSubmit={handleSubmit} noValidate>
@@ -354,8 +402,10 @@ export default function SignupPage() {
                 placeholder="Password"
                 value={form.password}
                 error={errors.password}
+                inputMode="numeric"
+                maxLength={6}
                 autoComplete="new-password"
-                onChange={(value) => updateField("password", value)}
+                onChange={(value) => updateField("password", value.replace(/\D/g, "").slice(0, 6))}
                 action={
                   <button
                     type="button"
@@ -375,8 +425,10 @@ export default function SignupPage() {
                 placeholder="Confirm Password"
                 value={form.confirmPassword}
                 error={errors.confirmPassword}
+                inputMode="numeric"
+                maxLength={6}
                 autoComplete="new-password"
-                onChange={(value) => updateField("confirmPassword", value)}
+                onChange={(value) => updateField("confirmPassword", value.replace(/\D/g, "").slice(0, 6))}
                 action={
                   <button
                     type="button"
@@ -388,6 +440,15 @@ export default function SignupPage() {
                   </button>
                 }
               />
+
+              <div className="signup-page-password-hint field full">
+                <span className={/^\d{6}$/.test(form.password) ? "is-ready" : ""}>
+                  <Check size={16} /> Exactly 6 digits
+                </span>
+                <span className={form.password && form.confirmPassword === form.password ? "is-ready" : ""}>
+                  <Check size={16} /> Passwords match
+                </span>
+              </div>
 
               <label className="remember signup-page-terms field full">
                 <input
@@ -444,6 +505,7 @@ function SignupField({
   onChange,
   type = "text",
   inputMode,
+  maxLength,
   autoComplete
 }: {
   icon: ReactNode;
@@ -456,6 +518,7 @@ function SignupField({
   onChange: (value: string) => void;
   type?: string;
   inputMode?: "text" | "email" | "tel" | "url" | "numeric" | "decimal" | "search";
+  maxLength?: number;
   autoComplete?: string;
 }) {
   return (
@@ -469,6 +532,7 @@ function SignupField({
           value={value}
           placeholder={placeholder}
           inputMode={inputMode}
+          maxLength={maxLength}
           autoComplete={autoComplete}
           aria-invalid={Boolean(error)}
           onChange={(event) => onChange(event.target.value)}

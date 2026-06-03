@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jagdisu-backend
+  namespace: jagdisu
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: jagdisu-backend
+  template:
+    metadata:
+      labels:
+        app: jagdisu-backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/your-org/jagdisu-backend:latest
+          ports:
+            - containerPort: 2000
+          envFrom:
+            - secretRef:
+                name: jagdisu-secrets
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 2000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 2000
+            initialDelaySeconds: 40
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jagdisu-backend
+  namespace: jagdisu
+spec:
+  selector:
+    app: jagdisu-backend
+  ports:
+    - port: 2000
+      targetPort: 2000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: jagdisu-backend
+  namespace: jagdisu
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: jagdisu-backend
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65

@@ -2,6 +2,7 @@ package com.jdsu.quiz.topic;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jdsu.quiz.ai.provider.AiProviderRouter;
 import com.jdsu.quiz.config.DynamicAiConfig;
 import com.jdsu.quiz.topic.TopicNotesController.TopicNotesRequest;
 import com.jdsu.quiz.topic.TopicNotesController.TopicNotesResponse;
@@ -21,6 +22,7 @@ import java.util.Map;
 @Service
 public class TopicNotesService {
     private final DynamicAiConfig dynamicAiConfig;
+    private final AiProviderRouter aiProviderRouter;
     private final String model;
     private final long timeoutSeconds;
     private final WebClient webClient;
@@ -28,12 +30,14 @@ public class TopicNotesService {
 
     public TopicNotesService(
             DynamicAiConfig dynamicAiConfig,
+            AiProviderRouter aiProviderRouter,
             @Value("${app.ai.model}") String model,
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.timeout-seconds}") long timeoutSeconds,
             ObjectMapper objectMapper
     ) {
         this.dynamicAiConfig = dynamicAiConfig;
+        this.aiProviderRouter = aiProviderRouter;
         this.model = model;
         this.timeoutSeconds = Math.max(20L, timeoutSeconds);
         this.objectMapper = objectMapper;
@@ -44,7 +48,7 @@ public class TopicNotesService {
     }
 
     public TopicNotesResponse generate(TopicNotesRequest request) {
-        if (!dynamicAiConfig.hasApiKey()) {
+        if (!aiProviderRouter.hasConfiguredProvider()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI API key is missing.");
         }
 
@@ -76,7 +80,7 @@ public class TopicNotesService {
                     "temperature", 0.25
             );
 
-            String raw = postToProvider(payload);
+            String raw = aiProviderRouter.chatCompletion("TOPIC_NOTES", model, payload).rawBody();
             JsonNode root = objectMapper.readTree(raw);
             String notes = root.path("choices").get(0).path("message").path("content").asText();
             if (notes == null || notes.isBlank()) {

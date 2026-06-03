@@ -2,6 +2,7 @@ package com.jdsu.quiz.quiz.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jdsu.quiz.ai.provider.AiProviderRouter;
 import com.jdsu.quiz.config.DynamicAiConfig;
 import com.jdsu.quiz.quiz.dto.QuestionDto;
 import com.jdsu.quiz.quiz.dto.QuizGenerateRequest;
@@ -34,6 +35,7 @@ public class OpenAiQuizClient {
     private static long nextAllowedRequestAtMillis = 0L;
 
     private final DynamicAiConfig dynamicAiConfig;
+    private final AiProviderRouter aiProviderRouter;
     private final String model;
     private final long minRequestIntervalMillis;
     private final int retryMaxAttempts;
@@ -44,6 +46,7 @@ public class OpenAiQuizClient {
 
     public OpenAiQuizClient(
             DynamicAiConfig dynamicAiConfig,
+            AiProviderRouter aiProviderRouter,
             @Value("${app.ai.model}") String model,
             @Value("${app.ai.base-url}") String baseUrl,
             @Value("${app.ai.min-request-interval-ms}") long minRequestIntervalMillis,
@@ -53,6 +56,7 @@ public class OpenAiQuizClient {
             ObjectMapper objectMapper
     ) {
         this.dynamicAiConfig = dynamicAiConfig;
+        this.aiProviderRouter = aiProviderRouter;
         this.model = model;
         this.minRequestIntervalMillis = Math.max(0L, minRequestIntervalMillis);
         this.retryMaxAttempts = Math.max(1, retryMaxAttempts);
@@ -66,17 +70,32 @@ public class OpenAiQuizClient {
     }
 
     public Optional<QuizResponse> generate(QuizGenerateRequest request, ExamPattern pattern, RetrievalContext retrievalContext) {
-        if (!dynamicAiConfig.hasApiKey()) {
+        if (!aiProviderRouter.hasConfiguredProvider()) {
             return Optional.empty();
         }
 
         try {
             String trainingInstructions = readTrainingInstructions();
             String targetDifficulty = resolveTargetDifficulty(request, pattern);
+            String fullTestInstructions = request.fullTestMode() ? """
+                    Full test intelligence mode:
+                    You are an Advanced Exam Intelligence Engine.
+                    First silently analyze the exam structure, total questions, total marks, sections, duration, negative marking, question types, subject distribution, topic distribution, difficulty mix, trends, current-affairs relevance, and cognitive skill mix.
+                    Then generate this batch as part of one full-length mock test that follows the actual exam pattern.
+                    Match real subject distribution, topic distribution, difficulty, time pressure, and question style.
+                    Include recent trends and current affairs only where the exam requires them.
+                    Avoid repetitive questions and create realistic distractors.
+                    Output JSON compatible with the app. You may include exam_analysis, exam_dna, blueprint, timer_strategy, and adaptive_insights, but the current batch questions must be in either "questions" or "mock_test".
+                    Each generated question must include question text, four options, correct answer, difficulty, subject/topic where possible, and explanation.
+                    Never generate random questions; always base the batch on the analyzed pattern.
+                    """ : """
+                    Custom quiz mode:
+                    Generate only the requested custom practice quiz for the supplied subject and chapter.
+                    """;
             String prompt = """
                     Generate an exam-style quiz as strict JSON only.
                     Schema:
-                    {"questions":[{"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"explanation":"...","difficulty":"..."}]}
+                    {"questions":[{"question":"...","options":["A","B","C","D"],"correctAnswerIndex":0,"explanation":"...","difficulty":"...","subject":"...","topic":"..."}]}
 
                     Core task:
                     - Analyse the requested exam, subject, chapter, and supplied pattern profile.
@@ -103,8 +122,12 @@ public class OpenAiQuizClient {
                     - Match the exam's real difficulty and pattern instead of making generic school-level MCQs.
                     - Use the requested difficulty level for this quiz. If the requested level is "Exam Pattern", use the real difficulty level of the exam profile.
                     - Explanations should briefly mention why the right option is right and why distractors fail.
+                    - Always include subject and topic for each question so the result screen can identify weak areas.
                     - If this is not the first batch, do not repeat, rephrase, or closely mirror any already generated question.
                     - Treat every batch as part of one continuous exam paper with varied subtopics.
+
+                    Mode instructions:
+                    %s
 
                     Editable training instructions:
                     %s
@@ -130,6 +153,7 @@ public class OpenAiQuizClient {
                     Generation rules: %s
                     """.formatted(
                     pattern.questionFormat(),
+                    fullTestInstructions,
                     trainingInstructions,
                     retrievalContext.corpusSummary(),
                     retrievalContext.generationInstruction(),
@@ -252,7 +276,7 @@ public class OpenAiQuizClient {
     }
 
     private String generateWithOpenAi(Map<String, Object> payload) {
-        return callProviderWithRetry(() -> postToOpenAi(payload));
+        return callProviderWithRetry(() -> aiProviderRouter.chatCompletion("QUIZ_GENERATION", model, payload).rawBody());
     }
 
     private String postToOpenAi(Map<String, Object> payload) {
@@ -287,18 +311,31 @@ public class OpenAiQuizClient {
         String content = root.path("choices").get(0).path("message").path("content").asText();
         JsonNode generated = objectMapper.readTree(content);
         List<QuestionDto> questions = new ArrayList<>();
+        JsonNode generatedQuestions = generated.path("questions");
+        if (!generatedQuestions.isArray() || generatedQuestions.isEmpty()) {
+            generatedQuestions = generated.path("mock_test");
+        }
 
         int index = 1;
-        for (JsonNode node : generated.path("questions")) {
+        for (JsonNode node : generatedQuestions) {
             List<String> options = new ArrayList<>();
-            node.path("options").forEach(option -> options.add(option.asText()));
+            if (node.path("options").isArray()) {
+                node.path("options").forEach(option -> options.add(option.asText()));
+            } else {
+                Stream.of("Option A", "Option B", "Option C", "Option D", "optionA", "optionB", "optionC", "optionD")
+                        .map(node::path)
+                        .filter(option -> !option.asText("").isBlank())
+                        .forEach(option -> options.add(option.asText()));
+            }
             questions.add(new QuestionDto(
                     "ai-" + index++,
-                node.path("question").asText(),
+                    node.path("question").asText(node.path("Question").asText()),
                     options,
-                    node.path("correctAnswerIndex").asInt(),
-                    node.path("explanation").asText(),
-                node.path("difficulty").asText(targetDifficulty)
+                    resolveCorrectAnswerIndex(node),
+                    node.path("explanation").asText(node.path("Explanation").asText()),
+                    node.path("difficulty").asText(node.path("Difficulty").asText(targetDifficulty)),
+                    resolveQuestionField(node, "subject", "Subject", "section", "Section"),
+                    resolveQuestionField(node, "topic", "Topic", "chapter", "Chapter")
             ));
         }
 
@@ -315,6 +352,41 @@ public class OpenAiQuizClient {
                 pattern.patternSummary(),
                 questions
         ));
+    }
+
+    private String resolveQuestionField(JsonNode node, String... fieldNames) {
+        return Stream.of(fieldNames)
+                .map(field -> node.path(field).asText(""))
+                .filter(value -> value != null && !value.isBlank())
+                .findFirst()
+                .orElse("");
+    }
+
+    private int resolveCorrectAnswerIndex(JsonNode node) {
+        if (node.has("correctAnswerIndex")) {
+            return Math.max(0, Math.min(3, node.path("correctAnswerIndex").asInt()));
+        }
+
+        String correctAnswer = Stream.of("Correct Answer", "correctAnswer", "correct_answer", "answer")
+                .map(field -> node.path(field).asText(""))
+                .filter(value -> !value.isBlank())
+                .findFirst()
+                .orElse("");
+
+        String normalized = correctAnswer.trim().toUpperCase();
+        if (normalized.startsWith("A") || normalized.equals("0")) {
+            return 0;
+        }
+        if (normalized.startsWith("B") || normalized.equals("1")) {
+            return 1;
+        }
+        if (normalized.startsWith("C") || normalized.equals("2")) {
+            return 2;
+        }
+        if (normalized.startsWith("D") || normalized.equals("3")) {
+            return 3;
+        }
+        return 0;
     }
 
     private String resolveTargetDifficulty(QuizGenerateRequest request, ExamPattern pattern) {
