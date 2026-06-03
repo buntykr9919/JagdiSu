@@ -6138,12 +6138,6 @@ body::after {
     linear-gradient(135deg, #ffffff, #f8fbff);
 }
 
-.superadmin-signup-shell .support-page-info {
-  background:
-    radial-gradient(circle at 82% 18%, rgba(168, 85, 247, 0.16), transparent 15rem),
-    linear-gradient(135deg, #ffffff, #fbf8ff);
-}
-
 .support-page-card {
   display: grid;
   align-content: center;

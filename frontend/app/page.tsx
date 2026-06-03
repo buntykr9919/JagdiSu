@@ -2216,19 +2216,7 @@ export default function HomePage() {
               <button className="button primary" onClick={adminLoginMode ? loginAsSuperadmin : login} disabled={loading} type="button">
                 {adminLoginMode ? <Crown size={23} /> : <GraduationCap size={23} />} {loading ? "Please wait..." : adminLoginMode ? "Open Dashboard" : "Login"}
               </button>
-              {adminLoginMode ? (
-                <button
-                  className="button ghost"
-                  onClick={() => {
-                    window.location.href = "/superadmin/signup";
-                    setError("");
-                  }}
-                  disabled={loading}
-                  type="button"
-                >
-                  <UserRound size={22} /> Superadmin Signup
-                </button>
-              ) : (
+              {adminLoginMode ? null : (
                 <button
                   className="button ghost"
                   onClick={() => {
@@ -2282,15 +2270,6 @@ export default function HomePage() {
                 }}
               >
                 <Crown size={17} /> Superadmin login
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  window.location.href = "/superadmin/signup";
-                }}
-              >
-                <UserRound size={17} /> Superadmin signup
               </button>
             </div>
           ) : null}
